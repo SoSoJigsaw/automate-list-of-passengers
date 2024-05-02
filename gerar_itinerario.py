@@ -1,14 +1,14 @@
 from __future__ import annotations
 import pathlib
 from datetime import datetime
-from typing import Dict
+from typing import Dict, Tuple, List
 import pandas as pd
 
 
 # Dicionário dos passageiros da van
-passageiros: Dict[str, Dict[str, str]] = {
+passageiros: Dict[Tuple[str], Dict[str, str]] = {
 
-    "Marcos Camargo": {
+    ("Marcos Camargo", "Marcos"): {
 
         'nome_itinerario': 'Marcos Camargo',
         'ponto_encontro': 'ehma',
@@ -16,7 +16,7 @@ passageiros: Dict[str, Dict[str, str]] = {
 
     },
 
-    # 'Tauane Santos': {
+    # ('Tauane Santos', ""): {
     #
     #     'nome_itinerario': 'Tauane Santos',
     #     'ponto_encontro': 'Jd.Rep',
@@ -24,7 +24,7 @@ passageiros: Dict[str, Dict[str, str]] = {
     #
     # },
 
-    "Camila Costa": {
+    ("Camila Costa", ""): {
 
         'nome_itinerario': 'Camila Costa',
         'ponto_encontro': 'Colonial',
@@ -32,7 +32,7 @@ passageiros: Dict[str, Dict[str, str]] = {
 
     },
 
-    'Alita Amancio': {
+    ("Alita Amancio", ""): {
 
         'nome_itinerario': 'Alita Amancio',
         'ponto_encontro': 'V.Flores',
@@ -40,7 +40,7 @@ passageiros: Dict[str, Dict[str, str]] = {
 
     },
 
-    "Lucas Roberto": {
+    ("Lucas Roberto", ""): {
 
         'nome_itinerario': 'Lucas Roberto',
         'ponto_encontro': 'V.Flores',
@@ -48,7 +48,7 @@ passageiros: Dict[str, Dict[str, str]] = {
 
     },
 
-    "Bruno Aragão": {
+    ("Bruno Aragão", ""): {
 
         'nome_itinerario': 'Bruno Aragão',
         'ponto_encontro': 'V.Flores',
@@ -56,7 +56,7 @@ passageiros: Dict[str, Dict[str, str]] = {
 
     },
 
-    "Felipe": {
+    ("Felipe", ""): {
 
         'nome_itinerario': 'Felipe Augusto',
         'ponto_encontro': 'JJ',
@@ -64,7 +64,7 @@ passageiros: Dict[str, Dict[str, str]] = {
 
     },
 
-    "Daniel": {
+    ("Daniel", ""): {
 
         'nome_itinerario': 'Daniel Lima',
         'ponto_encontro': 'JJ',
@@ -72,7 +72,7 @@ passageiros: Dict[str, Dict[str, str]] = {
 
     },
 
-    "Paulo": {
+    ("Paulo", ""): {
 
         'nome_itinerario': 'Paulo Granthon',
         'ponto_encontro': 'Dep. Ponte Alta',
@@ -80,7 +80,7 @@ passageiros: Dict[str, Dict[str, str]] = {
 
     },
 
-    "Kaue": {
+    ("Kaue", ""): {
 
         'nome_itinerario': 'Kaue',
         'ponto_encontro': 'Av.Ouro Fino',
@@ -88,7 +88,7 @@ passageiros: Dict[str, Dict[str, str]] = {
 
     },
 
-    "Felipe Sobral": {
+    ("Felipe Sobral", ""): {
 
         'nome_itinerario': 'Felipe Sobral',
         'ponto_encontro': 'Satélite',
@@ -96,7 +96,7 @@ passageiros: Dict[str, Dict[str, str]] = {
 
     },
 
-    "Marcos Vinícius Malaquias": {
+    ("Marcos Vinícius Malaquias", ""): {
 
         'nome_itinerario': 'Marcos Santos',
         'ponto_encontro': 'CPO',
@@ -104,7 +104,7 @@ passageiros: Dict[str, Dict[str, str]] = {
 
     },
 
-    "Theo da Rosa Smidt": {
+    ("Theo da Rosa Smidt", ""): {
 
         'nome_itinerario': 'Theo da Rosa',
         'ponto_encontro': 'CTA',
@@ -153,7 +153,7 @@ def tratamento_dos_dados(df) -> str:
     colunas[4] = 'SÓ VOLTO'
     df.columns = colunas
 
-    passageiros_votos = iterar_votos_ao_dict_passageiros(df)
+    passageiros_votos = processar_itinerario(df)
 
     vai = []
     volta = []
@@ -197,57 +197,32 @@ def tratamento_dos_dados(df) -> str:
     return mensagem
 
 
-def iterar_votos_ao_dict_passageiros(df) -> Dict[str, Dict[str, str]]:
+def processar_itinerario(df):
 
-    itinerario: Dict[str, Dict[str, str]] = {}
+    itinerario = {}
+    passageiros_df = set(df['PASSAGEIRO'])
     i = 0
-    for k, v in passageiros.items():
 
+    for nomes, info in passageiros.items():
         i += 1
+        encontrados = any(nome in passageiros_df for nome in nomes if nome)
 
-        for index, row in df.iterrows():
-            passageiro = row['PASSAGEIRO']
-            telefone = row['TELEFONE']
-            resposta_vai = row['VOU']
-            resposta_volta = row['SÓ VOLTO']
-            resposta_n_vai = row['NÃO VOU']
+        passageiro_info = {
+            "passageiro": info['nome_itinerario'],
+            "telefone": info['telefone'],
+            "ponto_encontro": info['ponto_encontro'],
+            "resposta_vai": '',
+            "resposta_volta": '',
+            "resposta_n_vai": ''
+        }
 
-            dict_passageiro: Dict[str, str] = {}
+        if encontrados:
+            passageiro_info.update({
+                "resposta_vai": df.loc[df['PASSAGEIRO'].isin(nomes), 'VOU'].iloc[0],
+                "resposta_volta": df.loc[df['PASSAGEIRO'].isin(nomes), 'SÓ VOLTO'].iloc[0],
+                "resposta_n_vai": df.loc[df['PASSAGEIRO'].isin(nomes), 'NÃO VOU'].iloc[0]
+            })
 
-            if k not in df['PASSAGEIRO'].values:
-
-                passageiro = v['nome_itinerario']
-                ponto_encontro = v['ponto_encontro']
-                telefone = v['telefone']
-
-                dict_passageiro = {
-                    "passageiro": passageiro,
-                    "telefone": telefone,
-                    "ponto_encontro": ponto_encontro,
-                    "resposta_vai": '',
-                    "resposta_volta": '',
-                    "resposta_n_vai": ''
-                }
-
-                itinerario[f'Passageiro_{i}'] = dict_passageiro
-
-            elif passageiro == k:
-
-                passageiro = v['nome_itinerario']
-                ponto_encontro = v['ponto_encontro']
-
-                if telefone != v['telefone']:
-                    telefone = None
-
-                dict_passageiro = {
-                    "passageiro": passageiro,
-                    "telefone": telefone,
-                    "ponto_encontro": ponto_encontro,
-                    "resposta_vai": resposta_vai,
-                    "resposta_volta": resposta_volta,
-                    "resposta_n_vai": resposta_n_vai
-                }
-
-                itinerario[f'Passageiro_{i}'] = dict_passageiro
+        itinerario[f'Passageiro_{i}'] = passageiro_info
 
     return itinerario
