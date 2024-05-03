@@ -3,6 +3,7 @@ import pathlib
 from datetime import datetime
 from typing import Dict, Tuple, List
 import pandas as pd
+from pandas.core.frame import DataFrame
 
 
 # Dicionário dos passageiros da van
@@ -115,8 +116,8 @@ passageiros: Dict[Tuple[str], Dict[str, str]] = {
 }
 
 
-# Função para ler dados do arquivo CSV
-def ler_dados_csv():
+def ler_dados_csv() -> DataFrame:
+    """Função que lê o arquivo CSV da data corrente e retorna o mesmo convertido em Dataframe do Pandas"""
 
     data = datetime.now()
 
@@ -139,7 +140,13 @@ def ler_dados_csv():
     return df
 
 
-def tratamento_dos_dados(df) -> str:
+def tratamento_dos_dados(df: DataFrame) -> str:
+    """
+    Função que recebe como parâmetro um Dataframe Pandas, faz processos de tratamento desses dados, aciona a
+    função que itera o dicionário dos passageiros com os dados presentes no Dataframe, descobrindo assim quais
+    passageiros responderam ou não a enquete, e quem vai ou não para a faculdade, retornando por fim a mensagem
+    que será enviada no whatsapp já formatada.
+    """
 
     # Substituir NaN por uma string vazia
     df.fillna('', inplace=True)
@@ -153,7 +160,8 @@ def tratamento_dos_dados(df) -> str:
     colunas[4] = 'SÓ VOLTO'
     df.columns = colunas
 
-    passageiros_votos = processar_itinerario(df)
+    # Realizar a iteração entre o dicionário de passageiros e o Dataframe, para então gerar o dicionário dos votos
+    passageiros_votos: Dict[str, Dict[str, str | int]] = processar_itinerario(df)
 
     vai = []
     volta = []
@@ -187,6 +195,7 @@ def tratamento_dos_dados(df) -> str:
 
             volta.append(linha_txt)
 
+    # Gerar a mensagem string a partir do join das listas preenchidas nas iterações anteriores
     mensagem = (f'*_IRÃO HOJE {datetime.now().day}/{datetime.now().month}_*\n\n'
                 f'*Placa da van:* DXB5B96\n\n'
                 f'*VAI:* \n\n{"".join(vai)}')
@@ -197,17 +206,24 @@ def tratamento_dos_dados(df) -> str:
     return mensagem
 
 
-def processar_itinerario(df):
+def processar_itinerario(df: DataFrame) -> Dict[str, Dict[str, str | int]]:
+    """
+    Função que itera o dicionário de passageiros com o os dados do Dataframe (CSV da enquete), retornando assim
+    um dicionário contendo todos os dados relevantes para a montagem do itinerário final na função principal.
+    """
 
-    itinerario = {}
+    itinerario: Dict[str, Dict[str, str | int]] = {}
     passageiros_df = set(df['PASSAGEIRO'])
     i = 0
 
+    # Iterando o dicionário dos passageiros, gerando o dicionário individual que será um valor no dicionário de retorno
     for nomes, info in passageiros.items():
+
         i += 1
+
         encontrados = any(nome in passageiros_df for nome in nomes if nome)
 
-        passageiro_info = {
+        passageiro_info: Dict[str, str | int] = {
             "passageiro": info['nome_itinerario'],
             "telefone": info['telefone'],
             "ponto_encontro": info['ponto_encontro'],
@@ -216,6 +232,7 @@ def processar_itinerario(df):
             "resposta_n_vai": ''
         }
 
+        # Se houver correspondência de nomes do dict de passageiros com os registrados no Dataframe,.então houve votos
         if encontrados:
             passageiro_info.update({
                 "resposta_vai": df.loc[df['PASSAGEIRO'].isin(nomes), 'VOU'].iloc[0],
@@ -223,6 +240,7 @@ def processar_itinerario(df):
                 "resposta_n_vai": df.loc[df['PASSAGEIRO'].isin(nomes), 'NÃO VOU'].iloc[0]
             })
 
+        # Passando o dicionário individual de um passageiro como valor do dicionário de retorno da função
         itinerario[f'Passageiro_{i}'] = passageiro_info
 
     return itinerario

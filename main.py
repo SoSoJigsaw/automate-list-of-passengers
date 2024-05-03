@@ -35,6 +35,7 @@ if __name__ == "__main__":
     if not full_path.parent.exists():
         full_path.parent.mkdir(parents=True)
 
+    # Salvando o arquivo
     with open(full_path, 'w') as arquivo:
         arquivo.write(mensagem)
 
